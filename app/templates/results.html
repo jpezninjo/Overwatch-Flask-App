@@ -1,0 +1,9 @@
+<!-- page_not_found.html-->
+
+{% extends "base.html" %}
+{% block title %}Search Results{% endblock %}
+{% block body %}
+	{{ content|safe }}
+	<br>
+	<button onclick="goBack()">Try another user</button>
+{% endblock %}
