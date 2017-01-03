@@ -1,9 +1,147 @@
-<!-- page_not_found.html-->
+<!doctype html>
+<html>
+    <head>
+        <link href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" rel="stylesheet">
+        <!-- Custom styles for this template -->
+        <link href="https://getbootstrap.com/examples/jumbotron-narrow/jumbotron-narrow.css" rel="stylesheet">
 
-{% extends "base.html" %}
-{% block title %}Search Results{% endblock %}
-{% block body %}
-	{{ content|safe }}
-	<br>
-	<button onclick="goBack()">Try another user</button>
-{% endblock %}
+        <!--Browser Favicon-->
+        <link rel="icon" href="https://blzgdapipro-a.akamaihd.net/game/unlocks/0x02500000000008BA.png">
+        
+    	<link rel= "stylesheet" type= "text/css" href= "{{ url_for('static',filename='styles/results.css') }}">
+    	<link rel= "stylesheet" type= "text/css" href= "{{ url_for('static',filename='styles/circle.css') }}">
+    </head>
+    <body>
+    	<!-- {{ content|safe }} -->
+        <nav class="navbar navbar-dark">
+            <label>OW.GG</label>
+            <span>Sorry this site only supports US PC accounts</span>
+            <div>    
+                <form class="form-inline" action="" target="">  
+
+                    <div class="form-group">        
+                        <label for="email">Battlenet username:</label>
+                        <input type="email" class="form-control" id="id-name">      
+                    </div>      
+
+                    <div class="form-group">        
+                        <label for="pwd">ID#:</label>        
+                        <input type="text" class="form-control" id="id-num" size="3">      
+                    </div>      
+                    <a href="">
+                    <span class="glyphicon glyphicon-search"></span>
+                    </a>
+                </form>        
+            </div>
+        </nav>
+        <br>
+        <div class="header-container-top">
+            <div class="header-container-left">
+                <div class="bt-container">
+                    <div class="img-container">
+                        <img src={{ player_icon_img }} height='65' class="player-icon">
+                        <img src={{ player_portrait_img }} height='150' class="player-portrait">
+                    </div>                
+                    <span class="bt-name">
+                        {{ player_name }}
+                    </span>
+                    <br>
+                    <span class="bt-level">
+                        Level: {{ player_level }}
+                    <img src={{ player_star_img }} height='50' class="star">
+                    </span>
+                </div>
+
+                <p class='SR-p'><span class='SR-num'>{{ player_rank }}</span><span class='SR-SR'>SR</span>
+                    <img src={{ player_rank_emblem_img }} height='50' width='50'>
+                </p>
+            </div>
+
+            <br>
+
+            <div class="header-container-right">
+                <div>
+                    {%  set class_builder = "c100 p" + player_lost_ratio|string + " small green" %}
+                    <div class="{{ class_builder }}">
+                        <span>{{ player_win_ratio|string }}%</span>
+                        <div class="slice">
+                            <div class="bar"></div>
+                            <div class="fill"></div>
+                        </div>
+                    </div>        
+                </div>
+
+                <div>
+                    <span class="stat-label">Competitive:</span><span> {{ player_comp_w }}W {{ player_comp_l }}L</span>
+                    <br>
+                    <span class="stat-label">Best Hero:</span><span> {{ player_best_hero }} ({{ player_hero_win_rate}} % win rate)</span>
+                    <br>
+                    <span class="stat-label">Quickplay wins:</span><span> {{ player_num_quickwins }}</span>
+                </div>
+
+            </div>
+
+        </div>
+
+        <div class="col">
+        	{% for item in hero %}
+            <div class="hero-card">
+
+                <div class="hero-card-left">
+                    <img src={{ item[0] }}>
+                    <h2>
+                    	{{ item[1] }}
+                    </h2>
+                    <span style='color: green'>{{ item[2] }}W</span> <span style='color: red'>{{ item[3]}}L</span> <span style='color: grey'>{{ item[4] }}T</span>
+                    <br>
+                    <span style='color: #879292'>({{ item[5] }}% win ratio)</span>
+                </div>
+
+                <div class="hero-card-right">
+                    <span class='special'>Best killstreak:</span>
+                    <span class='right'>{{ item[6] }}</span>
+                    <br>
+
+                    <span class='special'>Most damage done:</span>
+                    <span class='right'>{{ item[7] }}</span>
+                    <br>
+
+                    <span class='special'>Most eliminations:</span>
+                    <span class='right'>{{ item[8] }}</span>
+                    <br>
+                    <br>
+
+                    <span class='special'>Average number of deaths:</span>
+                    <span class='right'>{{ item[9] }}/game</span>
+                    <br>
+
+                    <span class='special'>Average damage:</span>
+                    <span class='right'>{{ item[10] }}/game</span>
+                    <br>
+
+                    <span class='special'>Average eliminations:</span>
+                    <span class='right'>{{ item[11] }}/game</span>
+                    <br>
+                    <br>
+
+                    <span class='special'>Total play time this season:</span><span class='right'>~{{ item[12] }}</span>
+                    <br>
+
+                    <span class='special'>Total objective time:</span>
+                    <span class='right'>{{ item[13] }}</span>
+                    <br>
+
+                    <span class='special'>Total time spent on fire:</span>
+                    <span class='right'>{{ item[14] }}</span>
+                    <br>
+                    <hr>
+                </div>
+            </div><!--end hero-card-->
+
+            <br>
+            {% endfor %}
+
+        </div>
+
+    </body>
+</html>
