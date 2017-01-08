@@ -34,7 +34,7 @@
                 </form>        
             </div>
         </nav>
-        <br>
+        
         <div class="header-container-top">
             <div class="header-container-left">
                 <div class="bt-container">
@@ -94,7 +94,21 @@
                     </h2>
                     <span style='color: green'>{{ item[2] }}W</span> <span style='color: red'>{{ item[3]}}L</span> <span style='color: grey'>{{ item[4] }}T</span>
                     <br>
-                    <span style='color: #879292'>({{ item[5] }}% win ratio)</span>
+
+                    {%- if player_win_ratio|int < 50 -%}
+                        {% set color = "#879292" %}
+
+                    {%- elif player_win_ratio|int <= 60 -%}
+                        {% set color = "#2daf7f" %}
+
+                    {%- elif player_win_ratio|int <= 68 -%}
+                        {% set color = "#1f8ecd" %}
+
+                    {%- else -%}
+                        {% set color = "#c6443e" %}
+                    {% endif %}
+
+                    <span style='color: {{ color }}'>({{ item[5] }}% win ratio)</span>
                 </div>
 
                 <div class="hero-card-right">
@@ -124,7 +138,7 @@
                     <br>
                     <br>
 
-                    <span class='special'>Total play time this season:</span><span class='right'>~{{ item[12] }}</span>
+                    <span class='special'>Total play time this season:</span><span class='right'>{{ item[12] }}</span>
                     <br>
 
                     <span class='special'>Total objective time:</span>
@@ -138,7 +152,7 @@
                 </div>
             </div><!--end hero-card-->
 
-            <br>
+            <!-- <br> -->
             {% endfor %}
 
         </div>

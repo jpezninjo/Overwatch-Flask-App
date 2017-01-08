@@ -5,7 +5,8 @@ body{
 }
 
 .navbar{
-    background-color: #465875
+    background-color: #465875;
+    margin-bottom: 0;
 }
 
 .navbar > label{
@@ -115,7 +116,8 @@ img.star{
 }
 
 .col{
-    display: inline-block; float: left; margin: 0 10px;
+    display: inline;
+    margin: 0 10px;
 }
 
 .col:nth-child(3) {
@@ -155,7 +157,8 @@ img.star{
 }
 
 .hero-card h2{
-    margin: 5px 5px 0 5px;
+    margin: 205px 5px 0 5px;
+    min-width: 175px;
 }
 
 .hero-card hr{

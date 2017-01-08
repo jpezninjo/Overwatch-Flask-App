@@ -6,7 +6,7 @@ from flask import request
 
 import json
 import re
-import urllib
+import urllib2 as urllib
 
 from app import app
 
@@ -61,9 +61,9 @@ def index():
         }
 
 
+        ow_api_call(first_name, last_name, content)
 
         return render_template("results.html", **content)
-            # ow_api_call(first_name, last_name))
     else:       
         return render_template("index.html")
 
@@ -91,18 +91,20 @@ def populate_user_data(data):
     return user_data
 
 def hero_lookup(name):
-    if name == 'Torbj&#xF6;rn':
+    print("The hero lookup name is ^" + name + "^")
+    if 'Torbj&#xF6;rn' in name:
         return 'Torbjoern'
-    elif name == 'L&#xFA;cio':
-        return Lucio
-    elif name == 'Soldier: 76':
+    elif 'L&#xFA;cio' in name:
+        return 'Lucio'
+    elif 'Soldier: 76' in name:
         return 'Soldier76'
     else:
         return name
 
-def ow_api_call(name, id_num):
+def ow_api_call(name, id_num, content):
 
     # Build the targetted API request url
+    urllib.install_opener(urllib.build_opener(urllib.ProxyHandler({'http': 'proxy.server:3128'})))
     url = 'https://api.lootbox.eu/pc/us/' + name + '-' + id_num + '/profile'
     print("Fetching data from ", url,)
 
@@ -118,82 +120,53 @@ def ow_api_call(name, id_num):
     # Validate data
     no_user_error = "Found no user with the BattleTag:"
     if no_user_error in str(data):
-        return "<p>" + str(data[data.keys()[0]]) + "</p>"
-
-
-    # TODO: Don't like this
-    html_data = """
-    <style>body{text-align:center}
-    .special{display: inline-block;width: 250px;text-align: right;}
-    .right{display: inline-block; padding-left: 5px; text-align: left; width: 160px;}
-    h2{margin: 0;}
-
-    .container{margin-top: 50px;}
-    .row{background-color: rgb(214, 214, 214); border: 3px solid black}
-    .col-md-4{border: 1px solid black; padding: 10px 15px; overflow: hidden;}
-
-    .SR-p{
-        background-color: #2E0854;
-        display: inline;
-        padding: 5px 10px 13px 11px;
-        border-radius: 15px;
-    }
-
-    .SR-num, .SR-SR{
-        font-weight: bold;
-        vertical-align: text-top;
-    }
-
-    .SR-num{
-        font-size: 24px;
-        color: white;
-    }
-
-    .SR-SR{
-        font-size: 17px;
-        color: #9A32CD;
-        padding-left: 7.5px;
-    }
-
-    </style>
-    """
-
-    html_start = ''
-    html_end = '<div style="position:relative">'
+        return
 
     user_data = populate_user_data(data)
     data_keys = user_data.keys()
     data_keys.sort()
 
-    html_data += str(user_data['username']) + "<br>"
-    html_data += "Level "+ str(user_data['level']) + "<br>"
-    # if not user_data['star'] is None:
-        # html_data += "<img src=" + str(user_data['star']) + " style='position: absolute; clip: rect(64px,256px,128px,0px); left: 50%; margin-left: -128px;'><br>"
-    
-    html_data += "<p class='SR-p'><span class='SR-num'>" + str(user_data['competitive_rank']) + "</span><span class='SR-SR'>SR</span></p>"
+
+    # content['player_icon_img'] = user_data['']
+    # content['player_portrait_img'] = user_data['']
+
+    # html_data += str(user_data['username']) + "<br>"
+    # html_data += "Level "+ str(user_data['level']) + "<br>"
+
+    content['player_comp_w'] = user_data['games_competitive_wins']
+    content['player_comp_l'] = user_data['games_competitive_lost']
+
+    content['player_win_ratio'] = None
+    content['player_lost_ratio'] = None
+
+    # html_data += "<p class='SR-p'><span class='SR-num'>" + str(user_data['competitive_rank']) + "</span><span class='SR-SR'>SR</span></p>"
 
     # html_data += "Competitive-" + str(user_data['games_competitive_wins']) + "W " + str(user_data['games_competitive_lost']) + " L<br>"
     
     comp_perc = int(user_data['games_competitive_wins']) / (int(user_data['games_competitive_played']))
 
-    html_data += "<div class='c100 p55 small green'>"
-    html_data += "<span>45%</span>"
-    html_data += "<div class='slice'>"
-    html_data += "<div class='bar'></div>"
-    html_data += "<div class='fill'></div>"
-    html_data += "</div>"
-    html_data += "</div>"
+    lose_perc = 100 - comp_perc
 
-    html_data += "Total quickplay wins: " + str(user_data['games_quick_wins'])
+    content['player_win_ratio'] = comp_perc
+    content['player_lost_ratio'] = lose_perc
 
-    html_data += fetch_favorite_heros(name, id_num)
+    # content['player_hero_win_rate'] = user_data['']
+    content['player_num_quickwins'] = user_data['games_quick_wins']
 
-    html_end += '</div>'
+    heroes_details = fetch_favorite_heros(name, id_num)
+    content['hero'] = heroes_details
 
-    html_data = html_start + html_data + html_end
-    
-    
-    return html_data
+    max_val = 0
+    best_name = None
+    for i in range(len(heroes_details)):
+        if int(heroes_details[i][5].replace("%", "")) > max_val:
+            max_val = int(heroes_details[i][5].replace("%", ""))
+            best_name = heroes_details[i][1]
+
+
+
+    content['player_best_hero'] = hero_lookup(str(best_name))
+    content['player_hero_win_rate'] = max_val
 
 def fetch_favorite_heros(name, id_num):
     # Second part
@@ -208,27 +181,21 @@ def fetch_favorite_heros(name, id_num):
     data = response.read().decode("utf-8")
     data = json.loads(data)
 
-    html_data  = ""
-    html_data += "<div class='container'>"
-    html_data += "<div class='row'>"
-    for i in range(3):
-        # print(data[i])
+    heroes = []
 
-        
-        html_data += "<div class='col-md-4'>"
-        html_data += "<img src=" + data[i]['image'] + "><br>"
-        html_data += "<h2>" + data[i]['name'] + "</h2>"
+
+    num_results = 5
+    for i in range(num_results):
+        hero_details = []
+        hero_details.append(data[i]['image'])   #[0]
+        hero_details.append(hero_lookup(data[i]['name']))    #[1]
 
         hero = data[i]['name']
-        # print("Hero-", hero)
-        html_data += fetch_hero_info(name, id_num, hero)
-        html_data += "</div>"
-    
-    html_data += "</div>"
-    html_data += "</div>"
-    html_data += "\n\n\n"
+        hero_details = hero_details + fetch_hero_info(name, id_num, hero)
 
-    return html_data
+        heroes.append(hero_details)
+
+    return heroes
 
 '''
 Helper method for converting jsonified time constructs, eg. "1hour", "08:51", etc,
@@ -244,6 +211,9 @@ def time_dejsonify(amount):
         return pieces[0].replace("0", "") + "m " + pieces[1] + "s"
         # return amount.replace(":", "m ") + "s"
 
+'''
+Fetch hero info for a given @hero for user @name @id_num
+'''
 def fetch_hero_info(name, id_num, hero):
     url = "https://api.lootbox.eu/pc/us/" + name + '-' + id_num + "/competitive/hero/" + hero_lookup(hero) + "/"
     print("Fetching data from ", url,)
@@ -268,48 +238,40 @@ def fetch_hero_info(name, id_num, hero):
     averages = ["Eliminations-Average", "DamageDone-Average", "Deaths-Average"]
     time = ["TimePlayed", "ObjectiveTime", "TimeSpentonFire"]
 
-    html = ""
-    # html += "<p>"
-    html += "<span style='color: green'>" + str(data['GamesWon']) + "W</span>"
-    html += " <span style='color: red'>" + str(data['GamesLost']) + "L</span>"
-    html += " <span style='color: grey'>" + str( int(data['GamesPlayed']) - ( int(data['GamesWon']) + int(data['GamesLost']) )  )  + "T</span><br>"
+
+    hero_details = []
+    hero_details.append(data['GamesWon'])
+    hero_details.append(data['GamesLost'])
+
+    hero_details.append(int(data['GamesPlayed']) - ( int(data['GamesWon']) + int(data['GamesLost']) ))
+    hero_details.append(data['WinPercentage'])
 
     win_perc = str(data['WinPercentage'])
     win_perc = int(win_perc.replace("%", ""))
     
-    html += "<span style='color: "
-    if win_perc < 50:
-        html += "#879292"
-    elif win_perc <= 60:
-        html += "#2daf7f"
-    elif win_perc <= 68:
-        html += "#1f8ecd"
-        # html += "orange"
-    else:
-        html += "#c6443e" 
 
-    html += "'>(" + str(data['WinPercentage']) + " win ratio)</span><br>"
-    # html += "</p>"
+    # if win_perc < 50:
+    #     html += "#879292"
+    # elif win_perc <= 60:
+    #     html += "#2daf7f"
+    # elif win_perc <= 68:
+    #     html += "#1f8ecd"
+    # else:
+    #     html += "#c6443e" 
 
-    # html += "<p>"
-    html += "<span class='special'>Best killstreak:</span><span class='right'>" + str(data['KillStreak-Best']) + "</span><br>"
-    html += "<span class='special'>Most damage done in one game:</span><span class='right'>" + str(data['DamageDone-MostinGame']) + "</span><br>"
-    html += "<span class='special'>Most eliminations:</span><span class='right'>" + str(data['Eliminations-MostinGame']) + "</span><br>"
-    # html += "</p>"
+    hero_details.append(str(data['KillStreak-Best']))
+    hero_details.append(str(data['DamageDone-MostinGame']))
+    hero_details.append(str(data['Eliminations-MostinGame']))
 
-    # html += "<p>"
-    html += "<span class='special'>Average amount of deaths:</span><span class='right'>" + str(data['Deaths-Average']) + "/game</span><br>"
-    html += "<span class='special'>Average damage:</span><span class='right'>" + str(data['DamageDone-Average']) + "/game</span><br>"
-    html += "<span class='special'>Average number of eliminations:</span><span class='right'>" + str(data['Eliminations-Average']) + "/game</span><br>"
-    # html += "</p>"
+    hero_details.append(str(data['Deaths-Average']))
+    hero_details.append(str(data['DamageDone-Average']))
+    hero_details.append(str(data['Eliminations-Average']))
 
-    # html += "<p>"
-    html += "<span class='special'>Total play time this season:</span><span class='right'>" + time_dejsonify(str(data['TimePlayed'])) + "</span><br>"
-    html += "<span class='special'>Total objective time:</span><span class='right'>" + time_dejsonify(str(data['ObjectiveTime'])) + "</span><br>"
-    html += "<span class='special'>Total time spent on fire:</span><span class='right'>" + time_dejsonify(str(data['TimeSpentonFire'])) + "</span><br>"
-    # html += "</p>"
+    hero_details.append(time_dejsonify(str(data['TimePlayed'])))
+    hero_details.append(time_dejsonify(str(data['ObjectiveTime'])))
+    hero_details.append(time_dejsonify(str(data['TimeSpentonFire'])))
 
-    return html
+    return hero_details
 
 
 
@@ -335,4 +297,10 @@ css selector odd even
 css box shadow
 
 two images on top of each other
+
+jinja2 template attribute spot
+jinja2 template add strings
+jinja2 template cast strings
+jinja contatenate strings for attribute
+jinja spaces
 '''
