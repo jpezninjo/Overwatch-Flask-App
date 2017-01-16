@@ -1,76 +1,135 @@
 # views.py
 from __future__ import print_function
-
-from flask import redirect, render_template, send_from_directory
-from flask import request
+from flask import make_response, redirect, render_template, request, send_from_directory
+from multiprocessing import Lock, Pipe
 
 import json
+import Queue
 import re
+import requests
+import threading
 import urllib2 as urllib
 
 from app import app
 
-@app.route('/')
-def default():
-    return redirect("/lookup", code=302)
+# @app.route('/')
+# def default():
+#     return redirect("/lookup", code=302)
 
 
-@app.route('/lookup', methods=['GET'])
+@app.route('/', methods=['GET', 'POST'])
 def index():
     if not request.args.get('first_name') is None:
-        first_name = request.form['first_name'] if request.method == 'POST' else request.args.get('first_name')
-        last_name = request.form['last_name'] if request.method == 'POST' else request.args.get('last_name')
+        name = request.form['first_name'] if request.method == 'POST' else request.args.get('first_name')
+        tag = request.form['last_name'] if request.method == 'POST' else request.args.get('last_name')
+
+        console = request.args.get('console')
+        console =  console.lower()
+        console = "xbl" if console == "xboxone" else "psn" if console == "ps4" else console
+
+        region = request.args.get('region')
+        region = region.lower()
+
+        num_results = request.args.get('num_results')
+        num_results = num_results.replace(" heros", "")
+        if num_results == 'No':
+            num_results = 0
+        else:
+            num_results = int(num_results)
+
+        print("{} {} {}".format(console, region, num_results))
 
         content = {
-            'player_icon_img' : "https://blzgdapipro-a.akamaihd.net/game/unlocks/0x025000000000069F.png",
-            'player_portrait_img' : "https://blzgdapipro-a.akamaihd.net/game/playerlevelrewards/0x0250000000000922_Border.png",
-            'player_name': 'jpezninjo', 
-            'player_rank': '2302',
-            'player_star_img' : "https://blzgdapipro-a.akamaihd.net/game/playerlevelrewards/0x0250000000000922_Rank.png",
-            'player_level': '102',
-            'player_rank_emblem_img' : "https://blzgdapipro-a.akamaihd.net/game/rank-icons/season-2/rank-4.png",
+            'player_icon_img' : None,
+            'player_portrait_img' : None,
+            'player_name': name,
+            'player_tag': tag, 
+            'player_rank': None,
+            'player_star_img' : None,
+            'player_level': None,
+            'player_rank_emblem_img' : "https://blzgdapipro-a.akamaihd.net/game/rank-icons/season-2/rank-1.png",
             'player_comp_w' : None,
             'player_comp_l' : None,
-            'player_win_ratio' : 55,
-            'player_lost_ratio' : 45,
+            'player_win_ratio' : None,
+            'player_lost_ratio' : None,
             'player_best_hero' : None,
             'player_hero_win_rate' : None,
             'player_num_quickwins' : None,
 
-            # hero_img, name, wins, losses, ties, rate, killstreak_best, dmg_most, elims_most, deaths_avrg, dmg_avrg, elims_avrg, playtime_total, total_objtime_total, firetime_total
             'hero': [
-                ("https://blzgdapipro-a.akamaihd.net/game/heroes/small/0x02E0000000000065.png",
-                "George1", 1, 2, 3, 25,
-                15, 25, 35,
-                25, 35, 45,
-                35, 45, 55
-                ),
-                ("https://blzgdapipro-a.akamaihd.net/game/heroes/small/0x02E0000000000065.png",
-                "George2", 1, 2, 3, 25,
-                15, 25, 35,
-                25, 35, 45,
-                35, 45, 55
-                ),
-                ("https://blzgdapipro-a.akamaihd.net/game/heroes/small/0x02E0000000000065.png",
-                "George3", 1, 2, 3, 25,
-                15, 25, 35,
-                25, 35, 45,
-                35, 45, 55
-                ),   
+            # hero_img, name, wins, losses, ties, rate, killstreak_best, dmg_most, elims_most,
+            # deaths_avg, dmg_avg, elims_avg, playtime_total, total_objtime_total, firetime_total
+                ('hero.png', 'name', 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
+                ('hero.png', 'name', 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
+                ('hero.png', 'name', 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
             ]
         }
 
+        conn1, conn2 = Pipe()
+        lock = Lock()
 
-        ow_api_call(first_name, last_name, content)
+        t1 = threading.Thread(target=get_gen_data, args = (content, name, tag, console, region, conn1, lock))
+        t1.start()
 
-        return render_template("results.html", **content)
-    else:       
-        return render_template("index.html")
+        t2 = threading.Thread(target=fetch_favorite_heros, args = (content, name, tag, console, region, num_results, conn2, lock))
+        t2.start()
+
+        resp = None
+
+        t1 = t1.join()
+        t2 = t2.join()
+
+        if content['hero'][0][0] == 'hero.png':            
+            content = {'name' : name, 'tag' : tag, 'console' : console.upper(), 'region' : region.upper()}
+            resp = make_response(render_template("no_user_found.html", **content))
+            resp.status_code = 501
+        else:
+            resp = make_response(render_template("results.html", **content))
+            resp.set_cookie('last_login', "{}#{}".format(name, tag), max_age=30*24*60*60) #30 days, or 2592000 seconds
+            resp.status_code = 200
+
+        # if app.DEBUG:
+            # import logging
+            # from logging.handlers import RotatingFileHandler
+            # app.logger.info('User attempt: {}#{} {} {}, status: {}'.format(name, tag, console, region, resp.status_code))
+
+        return resp
+    else:
+        cookie = request.cookies.get("last_login")
+        name = ""
+        tag = ""
+
+        if cookie != None:
+            parts = cookie.split("#")
+            name = parts[0]
+            tag =  parts[1]
+
+        return render_template("index.html", name=name, tag=tag)
+
 
 @app.errorhandler(404)
 def page_not_found(error):
     return render_template('page_not_found.html'), 404  
 
+'''
+Helper method for converting jsonified time constructs, eg. "1hour", "08:51", etc,
+into human legible wording, eg. "1 hour", "08m 51s"
+'''
+def time_dejsonify(amount):
+    if "hour" in amount:
+        m = re.search("(.*?)hour", amount)
+        m = m.group(1)
+        return "~" + m + " hour" + ("s" if int(m) != 1 else "")
+    elif ":" in amount:
+        pieces = amount.split(":")
+        return pieces[0].replace("0", "") + "m " + pieces[1] + "s"
+
+'''
+Because the json response has multiple keys with the same name, but in different
+heircharchys, this method exists to create a new json dict that uses the full
+key heirarchy of each object as a key, for instance there is both
+a player_star_img and an player_rank_emblem_img
+'''
 def populate_user_data(data):
     user_data = {}
 
@@ -90,190 +149,209 @@ def populate_user_data(data):
 
     return user_data
 
+
+'''
+I don't know why, but the API I used is very inconsistent with its naming
+conventions. The return value for Torbjoern uses the &#xF6;rn symbol,
+but the respective API call url uses Torbjoern.
+'''
 def hero_lookup(name):
-    print("The hero lookup name is ^" + name + "^")
+    # print("The hero lookup name is ^" + name + "^")
     if 'Torbj&#xF6;rn' in name:
         return 'Torbjoern'
     elif 'L&#xFA;cio' in name:
         return 'Lucio'
     elif 'Soldier: 76' in name:
-        return 'Soldier76'
+        return 'Soldier 76'
     else:
         return name
 
-def ow_api_call(name, id_num, content):
 
-    # Build the targetted API request url
-    urllib.install_opener(urllib.build_opener(urllib.ProxyHandler({'http': 'proxy.server:3128'})))
-    url = 'https://api.lootbox.eu/pc/us/' + name + '-' + id_num + '/profile'
-    print("Fetching data from ", url,)
+# called by thread 0A
+def get_gen_data(content, name, tag, console, region, conn1, lock):
+
+    #Lock immediately so there's no way in hell for the next process to try to retreive from
+    #an empty pipe
+    lock.acquire()
 
     # Retrieve response
-    response = urllib.urlopen(url)
-    print("Received response, code: " + str(response.getcode()) + "\n")
+    url = 'https://api.lootbox.eu/{}/{}/{}-{}/profile'.format(console, region, name, tag)
 
-    # Load response into a usable variable
-    data = response.read().decode("utf-8")
-    data = json.loads(data)
-    data = data[data.keys()[0]]
+    print("Fetching data from ", url,)
+    response = requests.get(url)
+    # Load response data into a usable variable
+    data = response.json()["data"]
     
     # Validate data
-    no_user_error = "Found no user with the BattleTag:"
-    if no_user_error in str(data):
-        return
+    if "no user" in str(data):
+        print("Could not find user {} {} {} {}".format(name, tag, console, region))
+        # print(str(data))
+        return False
 
     user_data = populate_user_data(data)
+
+    conn1.send(user_data['games_quick_wins'])
+    lock.release()
+
     data_keys = user_data.keys()
     data_keys.sort()
 
+    content['player_icon_img'] = user_data['avatar']
+    content['player_portrait_img'] = user_data['levelFrame']
+    content['player_rank'] = str(user_data['competitive_rank']) if user_data['competitive_rank'] else '???'
 
-    # content['player_icon_img'] = user_data['']
-    # content['player_portrait_img'] = user_data['']
+    content['player_name'] = user_data['username']
+    content['player_star_img'] = user_data['star'] if user_data['star'] else None
+    content['player_level'] = user_data['level']
 
-    # html_data += str(user_data['username']) + "<br>"
-    # html_data += "Level "+ str(user_data['level']) + "<br>"
+    # if 'rank_img' in data:
+    print("Jello")
+    print(user_data.get('competitive_rank_img'))
+    print(user_data.get('competitive_rank_img') == "None")
+    print(user_data.get('competitive_rank_img') == None)
+    if user_data.get('competitive_rank_img'):
+        content['player_rank_emblem_img'] = user_data.get('competitive_rank_img') 
 
     content['player_comp_w'] = user_data['games_competitive_wins']
     content['player_comp_l'] = user_data['games_competitive_lost']
 
-    content['player_win_ratio'] = None
-    content['player_lost_ratio'] = None
-
-    # html_data += "<p class='SR-p'><span class='SR-num'>" + str(user_data['competitive_rank']) + "</span><span class='SR-SR'>SR</span></p>"
-
-    # html_data += "Competitive-" + str(user_data['games_competitive_wins']) + "W " + str(user_data['games_competitive_lost']) + " L<br>"
-    
-    comp_perc = int(user_data['games_competitive_wins']) / (int(user_data['games_competitive_played']))
-
-    lose_perc = 100 - comp_perc
+    num_win = int(user_data['games_competitive_wins'])
+    num_total = float(user_data['games_competitive_played'])
+    comp_perc = int((num_win / num_total) * 100)
 
     content['player_win_ratio'] = comp_perc
-    content['player_lost_ratio'] = lose_perc
+    content['player_lost_ratio'] = 100 - comp_perc
 
-    # content['player_hero_win_rate'] = user_data['']
-    content['player_num_quickwins'] = user_data['games_quick_wins']
+    return True
 
-    heroes_details = fetch_favorite_heros(name, id_num)
+# called by thread 1A
+def fetch_favorite_heros(content, name, tag, console, region, num_results, conn2, lock):
+    heroes_details = fetch_favorite_heros_helper(name, tag, console, region, num_results)
+    if not heroes_details:
+        return False
     content['hero'] = heroes_details
 
-    max_val = 0
+    max_val = 1
     best_name = None
     for i in range(len(heroes_details)):
-        if int(heroes_details[i][5].replace("%", "")) > max_val:
-            max_val = int(heroes_details[i][5].replace("%", ""))
+        tmp_win_rate = int(heroes_details[i][5].replace("%", ""))
+        if tmp_win_rate > max_val:
+            max_val = tmp_win_rate
             best_name = heroes_details[i][1]
-
 
 
     content['player_best_hero'] = hero_lookup(str(best_name))
     content['player_hero_win_rate'] = max_val
 
-def fetch_favorite_heros(name, id_num):
-    # Second part
-    url = "https://api.lootbox.eu/pc/us/"  + name + '-' + id_num + "/competitive/heroes"
+    # Wait until thread 0A has created user_data
+    lock.acquire()
+    games_quick_wins = conn2.recv()
+    lock.release()
+
+    content['player_num_quickwins'] = games_quick_wins
+
+    return True
+
+def thread_work(q, data, i, name, tag):
+
+    hero_details = []
+    hero_details.append(data[i]['image'])
+        
+    hero_name = hero_lookup(data[i]['name'])
+    hero_details.append(hero_name)
+
+    # print("Thread {} starting work".format(i))
+    results = fetch_hero_info(name, tag, hero_name)
+    # print("Thread {} finishing work".format(i))
+
+    # Combine two lists quick and easy
+    hero_details = hero_details + results
+    q.put(hero_details)
+
+def fetch_hero_info(name, tag, hero):
+
+    url = "https://api.lootbox.eu/pc/us/" + name + '-' + tag + "/competitive/hero/" + hero + "/"
+
     print("Fetching data from ", url,)
 
     # Retrieve response
-    response = urllib.urlopen(url)
-    print("Received response, code: " + str(response.getcode()) + "\n")
-
+    response = requests.get(url)
     # Load response into a usable variable
-    data = response.read().decode("utf-8")
-    data = json.loads(data)
-
-    heroes = []
-
-
-    num_results = 5
-    for i in range(num_results):
-        hero_details = []
-        hero_details.append(data[i]['image'])   #[0]
-        hero_details.append(hero_lookup(data[i]['name']))    #[1]
-
-        hero = data[i]['name']
-        hero_details = hero_details + fetch_hero_info(name, id_num, hero)
-
-        heroes.append(hero_details)
-
-    return heroes
-
-'''
-Helper method for converting jsonified time constructs, eg. "1hour", "08:51", etc,
-into human legible wording, eg. "1 hour", "08m 51s"
-'''
-def time_dejsonify(amount):
-    if "hour" in amount:
-        m = re.search("(.*?)hour", amount)
-        m = m.group(1)
-        return "~" + m + " hour"
-    if ":" in amount:
-        pieces = amount.split(":")
-        return pieces[0].replace("0", "") + "m " + pieces[1] + "s"
-        # return amount.replace(":", "m ") + "s"
-
-'''
-Fetch hero info for a given @hero for user @name @id_num
-'''
-def fetch_hero_info(name, id_num, hero):
-    url = "https://api.lootbox.eu/pc/us/" + name + '-' + id_num + "/competitive/hero/" + hero_lookup(hero) + "/"
-    print("Fetching data from ", url,)
-
-    # Retrieve response
-    response = urllib.urlopen(url)
-    print("Received response, code: " + str(response.getcode()) + "\n")
-
-    # Load response into a usable variable
-    data = response.read().decode("utf-8")
-    data = json.loads(data)
-    data = data[data.keys()[0]]
+    data = response.json()[response.json().keys()[0]]
 
     data_copy = {}
     for keys in data.keys():
         data_copy[keys] = data[keys]
     data = data_copy
 
-    #Reference of key categories for displaying profile data
+    # Reference of key categories for displaying profile data
+    # This doesn't actually affect anything
     info = ["GamesLost", "GamesTied", "GamesWon", "WinPercentage"]
     best = ["KillStreak-Best", "DamageDone-MostinGame", "Eliminations-MostinGame"]
     averages = ["Eliminations-Average", "DamageDone-Average", "Deaths-Average"]
     time = ["TimePlayed", "ObjectiveTime", "TimeSpentonFire"]
 
-
     hero_details = []
-    hero_details.append(data['GamesWon'])
-    hero_details.append(data['GamesLost'])
+    hero_details.append(data.get('GamesWon'))
+    hero_details.append(data.get('GamesLost'))
 
-    hero_details.append(int(data['GamesPlayed']) - ( int(data['GamesWon']) + int(data['GamesLost']) ))
-    hero_details.append(data['WinPercentage'])
+    hero_details.append(int(data.get('GamesPlayed')) - ( int(data.get('GamesWon')) + int(data.get('GamesLost')) ))
+    hero_details.append(data.get('WinPercentage'))
 
-    win_perc = str(data['WinPercentage'])
+    win_perc = str(data.get('WinPercentage'))
     win_perc = int(win_perc.replace("%", ""))
-    
 
-    # if win_perc < 50:
-    #     html += "#879292"
-    # elif win_perc <= 60:
-    #     html += "#2daf7f"
-    # elif win_perc <= 68:
-    #     html += "#1f8ecd"
-    # else:
-    #     html += "#c6443e" 
+    hero_details.append(str(data.get('KillStreak-Best')))
+    hero_details.append(str(data.get('DamageDone-MostinGame')))
+    hero_details.append(str(data.get('Eliminations-MostinGame')))
 
-    hero_details.append(str(data['KillStreak-Best']))
-    hero_details.append(str(data['DamageDone-MostinGame']))
-    hero_details.append(str(data['Eliminations-MostinGame']))
+    hero_details.append(str(data.get('Deaths-Average')))
+    hero_details.append(str(data.get('DamageDone-Average')))
+    hero_details.append(str(data.get('Eliminations-Average')))
 
-    hero_details.append(str(data['Deaths-Average']))
-    hero_details.append(str(data['DamageDone-Average']))
-    hero_details.append(str(data['Eliminations-Average']))
-
-    hero_details.append(time_dejsonify(str(data['TimePlayed'])))
-    hero_details.append(time_dejsonify(str(data['ObjectiveTime'])))
-    hero_details.append(time_dejsonify(str(data['TimeSpentonFire'])))
+    hero_details.append(time_dejsonify(str(data.get('TimePlayed'))))
+    hero_details.append(time_dejsonify(str(data.get('ObjectiveTime'))))
+    hero_details.append(time_dejsonify(str(data.get('TimeSpentonFire'))))
 
     return hero_details
 
 
+def fetch_favorite_heros_helper(name, tag, console, region, num_results):
+    # Second part
+    url = "https://api.lootbox.eu/{}/{}/{}-{}/competitive/heroes".format(console, region, name, tag)
+    print("Fetching data from ", url,)
+
+    # Retrieve response
+    response = requests.get(url)
+    # Load response into a usable variable
+    data = response.json()
+
+    if "no user" in str(data):
+        print("Could not find user {} {} {} {}".format(name, tag, console, region))
+        # print(str(data))
+        return False
+
+    heroes = []
+    threads = []
+    q = Queue.Queue()
+
+    for i in range(num_results):
+        t = threading.Thread(target=thread_work, args = (q, data, i, name, tag))
+        threads.append(t)
+        # t.daemon = True
+        t.start()
+
+        # heroes.append(hero_details)
+
+    for t in threads:
+        t.join()
+
+    for i in range(num_results):
+        heroes.append(q.get())
+
+    return heroes
+
+# q = Queue.Queue()
 
 '''
 python regex

@@ -1,41 +1,105 @@
-<!-- index.html-->
 
-{% extends "base.html" %}
-{% block title %}Search Results{% endblock %}
-{% block body %}
-<img src="http://mms.businesswire.com/media/20160602006554/en/528252/5/2496424_Overwatch_Logo.jpg" style="max-height: 200px; border: 5px solid green;">
-<!-- <img src="https://pbs.twimg.com/media/CNf47UZWUAAWefF.jpg"> -->
-<p></p>
-<form action='/lookup' method='get'>
-  <h1>Overwatch Player Search</h1>
- 
-  <section>
-	<h3>Enter your Blizzard name and Battlenet id below</h3>
-    <!-- <h2>Player information</h2> -->
-    <p>
-      <label>
-        <span>Battlnet Name: </span>
-        <input type="text" id="name" name="first_name" required autocomplete="off"/>
-        <strong><abbr title="required">*</abbr></strong>
-      </label>
-    </p>
+
+<!doctype html>
+<html>
+  <head>
+    <link href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Custom styles for this template -->
+    <link href="https://getbootstrap.com/examples/jumbotron-narrow/jumbotron-narrow.css" rel="stylesheet">
+
+    <!--Browser Favicon-->
+    <link rel="icon" href="https://blzgdapipro-a.akamaihd.net/game/unlocks/0x02500000000008BA.png">
+        
+    <link rel= "stylesheet" type= "text/css" href= "app/static/styles/results.css">
+    <link rel= "stylesheet" type= "text/css" href= "app/static/styles/circle.css">
+    <link rel= "stylesheet" type= "text/css" href= "/styles/results.css">
+    <link rel= "stylesheet" type= "text/css" href= "/styles/circle.css">
+
+    <style>
+      input, select {
+        border-color: transparent;
+        border-radius: 2px;
+      }
+    </style>
+
+  </head>
+  <header>
+    <nav class="navbar navbar-dark">
+      <label>OW.GG</label>
+    </nav>
+  </header>
     
-     <p>
-      <label>
-        <span>Battlent ID: </span>
-        <input type="text" id="mail" name="last_name" required pattern="[0-9]{4,5}$" maxlength="5" size="5" autocomplete="off">
-        <strong><abbr title="required">*</abbr></strong>
-  			</label>
-		</p>
-	</section>
- 
-	<section>
-	<p><strong><abbr title="required">*</abbr></strong>Required fields</p>
-	<p>
-      <button>Look up player</button>
-    </p>
-  </section>
-</form>
-<p>
-</form>
-{% endblock %}
+  <body>
+<div class="row">
+  <div class="col-md-3"></div>
+    <div class="col-md-6">
+
+      <img src="http://vignette2.wikia.nocookie.net/logopedia/images/f/f2/Overwatch.png/revision/latest?cb=20150106200901" style="max-height: 200px;">
+      <form action='/' method='get'>
+        <h1>Overwatch Player Search</h1>
+          {% block error %}
+          {% endblock %}
+          <section>
+            <h3>Enter your Blizzard name and Battlenet id below</h3>
+            <p>
+              <label>
+                <span class="special">Battlenet Name: </span>
+                <input type="text" id="name" name="first_name" size="12" required autocomplete="on" value="{{ name }}">
+                <strong><abbr title="required">*</abbr></strong>
+              </label>
+            </p>
+    
+            <p>
+              <label>
+                <span class="special">Battlenet ID: </span>
+                <input type="text" id="mail" name="last_name" required pattern="[0-9]+$" maxlength="5" size="5" autocomplete="on" value="{{ tag }}">
+                <strong><abbr title="required">*</abbr></strong>
+              </label>
+            </p>
+            <p>
+              <label>
+                <span class="special">Platform: </span>
+                <select id="console" name="console">
+                        <option selected="selected">PC</option>
+                        <option>XboxOne</option>
+                        <option>PS4</option>
+                </select>
+              </label>
+            </p>
+            <p>
+              <label>
+                <span class="special">Region: </span>
+                <select  id="region" name="region">
+                  <option>EU</option>
+                  <option selected="selected">US</option>
+                  <option>KR</option>
+                  <option>CN</option>
+                  <option>Global</option>
+                </select>
+              </label>
+            </p>
+            <p>
+              <label>
+                <span class="special">Fetch stats for: </span>
+                <select id="num_results" name="num_results">
+                        <!-- <option>0 heros</option> -->
+                        <option>1 heros</option>
+                        <option>2 heros</option>
+                        <option selected="selected">3 heros</option>
+                        <option>4 heros</option>
+                        <option>5 heros</option>
+                        <option>6 heros</option>
+                        <option>7 heros</option>
+                </select>
+              </label>
+            </p>
+
+                            <!-- <p><strong><abbr title="required">*</abbr></strong>Required fields</p> -->
+                            <p style="padding-left: 90px;"><button>Look up player</button></p>
+                        </section>
+                    </form>
+                </div>
+            <div class="col-md-3"></div>
+        </div>
+    </body>
+</html>

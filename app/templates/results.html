@@ -1,3 +1,4 @@
+
 <!doctype html>
 <html>
     <head>
@@ -8,30 +9,78 @@
         <!--Browser Favicon-->
         <link rel="icon" href="https://blzgdapipro-a.akamaihd.net/game/unlocks/0x02500000000008BA.png">
         
-    	<link rel= "stylesheet" type= "text/css" href= "{{ url_for('static',filename='styles/results.css') }}">
-    	<link rel= "stylesheet" type= "text/css" href= "{{ url_for('static',filename='styles/circle.css') }}">
+        <link rel= "stylesheet" type= "text/css" href= "app/static/styles/results.css">
+        <link rel= "stylesheet" type= "text/css" href= "app/static/styles/circle.css">
+        <link rel= "stylesheet" type= "text/css" href= "/styles/results.css">
+        <link rel= "stylesheet" type= "text/css" href= "/styles/circle.css">
     </head>
+    
     <body>
-    	<!-- {{ content|safe }} -->
         <nav class="navbar navbar-dark">
-            <label>OW.GG</label>
-            <span>Sorry this site only supports US PC accounts</span>
-            <div>    
-                <form class="form-inline" action="" target="">  
-
-                    <div class="form-group">        
-                        <label for="email">Battlenet username:</label>
-                        <input type="email" class="form-control" id="id-name">      
+            <!-- <a href="/"> -->
+                <label>OW.GG</label>
+            <!-- </a> -->
+            <div class="container">  
+                <form class="form-inline" action='/' method='get'>
+                    <div class="input-group">
+                        <span class="input-group-addon" for="id-name">Battlenet username:</span>
+      
+                        <input class="form-control" type="text" id="id-name" placeholder="Example: OnlyHanzo">      
                     </div>      
 
-                    <div class="form-group">        
-                        <label for="pwd">ID#:</label>        
-                        <input type="text" class="form-control" id="id-num" size="3">      
-                    </div>      
-                    <a href="">
-                    <span class="glyphicon glyphicon-search"></span>
-                    </a>
-                </form>        
+                    <div class="input-group">        
+                      <span class="input-group-addon" for="id-num">ID#:</span>        
+                      <input class="form-control" type="text" id="id-num" size="3" placeholder="Example: 11177">      
+                    </div>
+
+                    <div class="input-group">
+                      <span class="input-group-addon" for="platform">Platform:</span>
+                      <select class="form-control" id="platform">
+                        <option selected="selected">PC</option>
+                        <option>XboxOne</option>
+                        <option>PS4</option>
+                      </select>
+                    </div>
+    
+                    <div class="input-group">
+                      <span class="input-group-addon" for="region">Region:</span>
+                      <select class="form-control" id="region">
+                        <option>EU</option>
+                        <option selected="selected">US</option>
+                        <option>KR</option>
+                        <option>CN</option>
+                        <option>Global</option>
+                      </select>
+                    </div>
+    
+<!--                     <div class="input-group">
+                      <span class="input-group-addon" for="sel1">Results for:</span>
+                      <select class="form-control" id="sel1">
+                        <option>Competitive</option>
+                        <option>Quickplay</option>
+                      </select>
+                    </div> -->
+    
+                    <div class="input-group">
+                      <span class="input-group-addon" for="num_results">Favorite Heroes:</span>
+                      <select class="form-control" id="num_results">
+                        <option>None</option>
+                        <option>1</option>
+                        <option>2</option>
+                        <option selected="selected">3</option>
+                        <option>4</option>
+                        <option>5</option>
+                        <option>6</option>
+                        <option>7</option>
+                        <option>8</option>
+                        <option>9</option>
+                        <option>10</option>
+                        <option>11</option>
+                        <option>12</option>
+                      </select>
+                    </div>
+                    <button type="submit" class="btn btn-default"><span class="glyphicon glyphicon-search"></span></button>
+                </form>
             </div>
         </nav>
         
@@ -43,12 +92,14 @@
                         <img src={{ player_portrait_img }} height='150' class="player-portrait">
                     </div>                
                     <span class="bt-name">
-                        {{ player_name }}
+                        {{ player_name }} {{ player_id_num }}
                     </span>
                     <br>
                     <span class="bt-level">
-                        Level: {{ player_level }}
-                    <img src={{ player_star_img }} height='50' class="star">
+                        Level:&nbsp;{{ player_level }}
+                        {% if player_star_img is not none %}  
+                            <img src={{ player_star_img }} height='50' class="star">
+                        {%endif %}
                     </span>
                 </div>
 
@@ -63,7 +114,7 @@
                 <div>
                     {%  set class_builder = "c100 p" + player_lost_ratio|string + " small green" %}
                     <div class="{{ class_builder }}">
-                        <span>{{ player_win_ratio|string }}%</span>
+                        <span>{{ player_win_ratio }}%</span>
                         <div class="slice">
                             <div class="bar"></div>
                             <div class="fill"></div>
@@ -74,9 +125,9 @@
                 <div>
                     <span class="stat-label">Competitive:</span><span> {{ player_comp_w }}W {{ player_comp_l }}L</span>
                     <br>
-                    <span class="stat-label">Best Hero:</span><span> {{ player_best_hero }} ({{ player_hero_win_rate}} % win rate)</span>
+                    <span class="stat-label">Least Tilted Hero:</span><span> {{ player_best_hero }} ({{ player_hero_win_rate}} % win rate)</span>
                     <br>
-                    <span class="stat-label">Quickplay wins:</span><span> {{ player_num_quickwins }}</span>
+                    <span class="stat-label">Quickplay wins:</span><span>  {{ player_num_quickwins }}</span>
                 </div>
 
             </div>
@@ -84,31 +135,32 @@
         </div>
 
         <div class="col">
-        	{% for item in hero %}
+            {% for item in hero %}
             <div class="hero-card">
 
                 <div class="hero-card-left">
                     <img src={{ item[0] }}>
                     <h2>
-                    	{{ item[1] }}
+                        {{ item[1] }}
                     </h2>
-                    <span style='color: green'>{{ item[2] }}W</span> <span style='color: red'>{{ item[3]}}L</span> <span style='color: grey'>{{ item[4] }}T</span>
-                    <br>
-
-                    {%- if player_win_ratio|int < 50 -%}
+                    <span class="KDA">
+                        <div style="margin-bottom: -4px">
+                            <span style='color: green'>{{ item[2] }}W</span> <span style='color: red'>{{ item[3]}}L</span> <span style='color: grey'>{{ item[4]}}T</span>
+                        </div>
+                        {%- if player_win_ratio|int < 50 -%}
                         {% set color = "#879292" %}
 
-                    {%- elif player_win_ratio|int <= 60 -%}
-                        {% set color = "#2daf7f" %}
+                        {%- elif player_win_ratio|int <= 60 -%}
+                            {% set color = "#2daf7f" %}
 
-                    {%- elif player_win_ratio|int <= 68 -%}
-                        {% set color = "#1f8ecd" %}
+                        {%- elif player_win_ratio|int <= 68 -%}
+                            {% set color = "#1f8ecd" %}
 
-                    {%- else -%}
-                        {% set color = "#c6443e" %}
-                    {% endif %}
-
-                    <span style='color: {{ color }}'>({{ item[5] }}% win ratio)</span>
+                        {%- else -%}
+                            {% set color = "#c6443e" %}
+                        {% endif %}
+                        <span 'color: {{ color }}' class="win-perc">({{ item[5] }} win rate)</span>
+                    </span>
                 </div>
 
                 <div class="hero-card-right">
@@ -123,37 +175,41 @@
                     <span class='special'>Most eliminations:</span>
                     <span class='right'>{{ item[8] }}</span>
                     <br>
+                    <hr>
                     <br>
 
-                    <span class='special'>Average number of deaths:</span>
-                    <span class='right'>{{ item[9] }}/game</span>
+                    <span class='special'>Average deaths:</span>
+                    <span class='right'>{{ item[9] }}</span>
                     <br>
 
                     <span class='special'>Average damage:</span>
-                    <span class='right'>{{ item[10] }}/game</span>
+                    <span class='right'>{{ item[10] }}</span>
                     <br>
 
-                    <span class='special'>Average eliminations:</span>
-                    <span class='right'>{{ item[11] }}/game</span>
+                    <span class='special'>Avg eliminations:</span>
+                    <span class='right'>{{ item[11] }}</span>
                     <br>
-                    <br>
-
-                    <span class='special'>Total play time this season:</span><span class='right'>{{ item[12] }}</span>
+                    <hr>
                     <br>
 
-                    <span class='special'>Total objective time:</span>
+                    <span class='special'>Play time this season:</span>
+                    <span class='right'>{{ item[12] }}</span>
+                    <br>
+
+                    <span class='special'>Objective time:</span>
                     <span class='right'>{{ item[13] }}</span>
                     <br>
 
-                    <span class='special'>Total time spent on fire:</span>
+                    <span class='special'>Time spent on fire:</span>
                     <span class='right'>{{ item[14] }}</span>
                     <br>
                     <hr>
+
                 </div>
             </div><!--end hero-card-->
-
-            <!-- <br> -->
             {% endfor %}
+            <!-- <br> -->
+            
 
         </div>
 

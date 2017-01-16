@@ -1,3 +1,6 @@
+
+
+
 body{
     background-color: #1F8ECD;
     margin: 0;
@@ -6,7 +9,8 @@ body{
 
 .navbar{
     background-color: #465875;
-    margin-bottom: 0;
+    border-radius: 0;
+    margin-bottom: 10px;
 }
 
 .navbar > label{
@@ -18,9 +22,15 @@ body{
     float: right;
 }
 
+.btn-default{
+    height: 25px;
+    padding: 3px 0 0 1px;
+    width: 25px;
+}
+
 .glyphicon{
     display: inline-block;
-    font-size: 25px;
+    font-size: 20px;
     margin-bottom: -5px;
 }
 
@@ -125,27 +135,26 @@ img.star{
 }
 
 .hero-card{
+    /*background-color: #EAEAEA;*/
+    background-color: #F0F8FF;
     border: .5px solid grey;
     border-radius: 5px;
     box-shadow: 0 5px 10px #333333;
     display: inline-block;
     margin-bottom: 15px;
-    padding: 0 15px 5px 0;
-}
-
-.hero-card{
-    background-color: #EAEAEA;
+    padding: 10px 0px;
 }
 
 .hero-card-left{
-    float: left;
-    height: 100%;
+/*    float: left;*/
+/*    height: 100%;*/
     text-align: center;
 }
 
 .hero-card-right{
     display: inline-block;
-    padding: 10px 5px 5px 5px;
+    padding: 10px 0 5px 0;
+    width: 100%;
 }
 
 
@@ -153,12 +162,27 @@ img.star{
     box-shadow: 0px 8px 10px #aaa;
     border-left: 2px solid #2E0854;
     border-bottom: 2px solid #2E0854;
-    border-radius: 5px;
+    border-radius: 75px;
+    height: 50px;
+    width: 50px;
 }
 
 .hero-card h2{
-    margin: 205px 5px 0 5px;
+    font-size: 13px;
+    margin: 5px 5px 0 5px;
     min-width: 175px;
+    padding-top: 5px;
+}
+
+.hero-card .KDA{
+    font-family: "Helvetica Neue","Helvetica","Arial","Verdana","sans-serif",Dotum;
+    font-size: 13px;
+}
+
+.win-perc{
+    color: #879292;
+    font-size: 11px;
+    line-height: 14px;
 }
 
 .hero-card hr{
@@ -168,14 +192,26 @@ img.star{
     margin: 0;
 }
 
+.special, .right{
+/*    border: 1px solid #00A2FF;*/
+    color: #555;
+    font-size: 11px;
+    line-height: 16px;
+}
+
 .special{
     display: inline-block;
-    width: 200px;
+    width: 110px;
     text-align: right;
+    font-family: Tahoma;
+/*    font-weight: bold;*/
 }
 
 .right{
-    padding-left: 10px;
+    display: inline-block;
+    font-family: Tahoma;
+    padding-left: 1px;
+/*    width: 90px;*/
 }
 
 .stat-label{

@@ -1,0 +1,11 @@
+{% extends "index.html" %}
+{% block error %}
+Could not find a match for {{ name }}#{{ tag }} with region {{ region }} and platform {{ console }}
+<ul>
+    Hints:
+    <li>The username is case-sensitive</li>
+    <li>The number may be off</li>
+    <li>Did you use the right region?</li>
+    <li>Did you use the right platform?</li>
+</ul>
+{% endblock %}
